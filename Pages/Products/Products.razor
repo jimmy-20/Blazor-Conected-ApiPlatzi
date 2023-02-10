@@ -1,0 +1,52 @@
+@page "/product"
+@inject ILogger<Products> looger
+@inject IProductService productService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@inject IToastService toastService
+
+<ModuleTitle Title="Productos"/>
+
+<button class="btn btn-success" @onclick="@(() => NavigationManager.NavigateTo("product/create"))" type="submit">New product</button>
+@if (products?.Count>0){
+    <div class="products-container">
+        @foreach (Product p in products)
+        {
+            <div class="card">
+                <img class="card-img-top" alt="Product" src="@p.Images[0]" loading="lazy" width="270" height="210"/>
+                <div class="card-body">
+                    <h4><b>@p.Title</b></h4>
+                    <p>@p.Description</p>
+                    <b>@p.Category.Name</b>
+                    <p>@p.Price.ToString("C")</p>
+                    <input type="button" class="btn btn-danger btn-delete" value="Delete" @onclick="@(() => DeleteProduct(p))">
+                </div>
+             </div>  
+        }
+    </div>
+    
+}else{
+    <p>No hay productos que mostrar</p>
+}
+@code{
+    private List<Product> products;
+    private async Task<List<Product>> GetProducts(){
+        return await productService.Get();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await GetProducts();
+        looger.LogInformation(products.ToString());
+    }
+
+    private async Task DeleteProduct(Product p){
+        if (!await JsRuntime.InvokeAsync<bool>("confirm",$"Are you sure want to remove?{p.Title}")){
+            return;
+        }
+
+        await productService.Delete(p.Id);
+        toastService.ShowSuccess("Producto borrado");
+        products = await GetProducts();
+    }
+}
